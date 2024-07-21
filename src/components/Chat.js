@@ -1,56 +1,49 @@
+// src/components/Chat.js
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import io from 'socket.io-client';
+import axios from 'axios';
 
-const Chat = ({ user }) => {
-    const [message, setMessage] = useState('');
+const Chat = () => {
+    const { room } = useParams();
     const [messages, setMessages] = useState([]);
-    const roomName = 'default_room';  // You can dynamically set this based on your application logic
+    const [message, setMessage] = useState('');
+    const socket = io('http://localhost:8000');
 
     useEffect(() => {
-        const socket = new WebSocket(`ws://localhost:8000/ws/chat/${roomName}/`);
+        socket.emit('join', room);
 
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            setMessages((prevMessages) => [...prevMessages, { user: 'server', message: data.message }]);
-        };
+        socket.on('message', (data) => {
+            setMessages(prevMessages => [...prevMessages, data]);
+        });
 
-        socket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
-        };
+        return () => socket.disconnect();
+    }, [room]);
 
-        return () => socket.close();
-    }, [roomName]);
-
-    const sendMessage = (e) => {
-        e.preventDefault();
-        const socket = new WebSocket(`ws://localhost:8000/ws/chat/${roomName}/`);
-        socket.onopen = function() {
-            socket.send(JSON.stringify({
-                'message': message
-            }));
-            setMessages((prevMessages) => [...prevMessages, { user, message }]);
-            setMessage('');
-        };
+    const handleSend = async () => {
+        socket.emit('message', { room, message });
+        setMessage('');
     };
 
     return (
-        <div>
-            <div>
+        <div className="container">
+            <h2>Chat Room: {room}</h2>
+            <div className="chat-box" style={{ height: '400px', overflowY: 'scroll', border: '1px solid #ccc', padding: '10px' }}>
                 {messages.map((msg, index) => (
-                    <div key={index}>
-                        <strong>{msg.user}: </strong>
-                        <span>{msg.message}</span>
+                    <div key={index} className="message">
+                        <strong>{msg.sender.username}: </strong>{msg.content}
                     </div>
                 ))}
             </div>
-            <form onSubmit={sendMessage}>
+            <div className="input-group mt-2">
                 <input
                     type="text"
+                    className="form-control"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message"
                 />
-                <button type="submit">Send</button>
-            </form>
+                <button className="btn btn-primary" onClick={handleSend}>Send</button>
+            </div>
         </div>
     );
 };

@@ -1,30 +1,41 @@
-import React, { useEffect, useState } from 'react';
+// src/components/UsersList.js
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
 
 const UsersList = () => {
     const [users, setUsers] = useState([]);
 
     useEffect(() => {
         const fetchUsers = async () => {
-            try {
-                const response = await axios.get('/api/users/');
-                setUsers(response.data);
-            } catch (err) {
-                console.error(err);
-            }
+            const token = localStorage.getItem('access');
+            const response = await axios.get('http://localhost:8000/api/users/', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setUsers(response.data);
         };
-
         fetchUsers();
     }, []);
 
+    const handleSendInterest = async (userId) => {
+        const token = localStorage.getItem('access');
+        await axios.post('http://localhost:8000/api/interests/', { recipient: userId }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+    };
+
     return (
-        <div>
-            <h1>Users List</h1>
-            <ul>
-                {users.map((user) => (
-                    <li key={user.id}>
-                        <Link to={`/users/${user.id}`}>{user.username}</Link>
+        <div className="container">
+            <h2>Users</h2>
+            <ul className="list-group">
+                {users.map(user => (
+                    <li key={user.id} className="list-group-item">
+                        {user.username}
+                        <button
+                            className="btn btn-primary float-right"
+                            onClick={() => handleSendInterest(user.id)}
+                        >
+                            Send Interest
+                        </button>
                     </li>
                 ))}
             </ul>
